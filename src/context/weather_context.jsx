@@ -1,7 +1,4 @@
-import React, { useState, createContext, useEffect } from "react";
-import { API_KEY } from "../reference";
-import { API_URL } from "../reference";
-import { APP_ICON } from "../reference";
+import React, { useState, createContext } from "react";
 
 export const WeatherContext = createContext();
 
@@ -9,14 +6,13 @@ export const WeatherContextProvider = (props) => {
   const [noData, setNoData] = useState("No Data Yet");
   const [searchTerm, setSearchTerm] = useState("");
   const [weatherData, setWeatherData] = useState();
-
   const [weatherDataArray, setWeatherDataArray] = useState([]);
   const [city, setCity] = useState("Unknown location");
-  const [weatherIcon, setWeatherIcon] = useState(`${APP_ICON}10n@2x.png`);
+  const [weatherIcon, setWeatherIcon] = useState(
+    `${process.env.REACT_APP_ICON}10n@2x.png`
+  );
 
   const getWeather = async (location) => {
-    setWeatherData();
-
     let howToSearch =
       typeof location === "string"
         ? `q=${location}`
@@ -24,9 +20,9 @@ export const WeatherContextProvider = (props) => {
 
     try {
       let response = await fetch(
-        `${
-          API_URL + howToSearch
-        }&appid=${API_KEY}&units=metric&cnt=5&exclude=hourly,minutely`
+        `${process.env.REACT_APP_URL + howToSearch}&appid=${
+          process.env.REACT_APP_KEY
+        }&units=metric&cnt=5&exclude=hourly,minutely`
       );
       let data = await response.json();
       if (data.cod !== "200") {
@@ -34,9 +30,13 @@ export const WeatherContextProvider = (props) => {
         return;
       }
       if (data && data.list.length > 0) {
-        setWeatherData(data.list[0]);
+        setWeatherData(data);
         setCity(`${data.city.name}, ${data.city.country}`);
-        setWeatherIcon(`${APP_ICON + data.list[0].weather[0]["icon"]}@4x.png`);
+        setWeatherIcon(
+          `${
+            process.env.REACT_APP_ICON + data.list[0].weather[0]["icon"]
+          }@4x.png`
+        );
         setNoData("");
       }
     } catch (error) {
@@ -50,35 +50,26 @@ export const WeatherContextProvider = (props) => {
       latitude,
       longitude,
     };
-
     localStorage.setItem("data", JSON.stringify(data));
-
     getWeather([latitude, longitude]);
-  };
-
-  const handleChange = (input) => {
-    const { value } = input.target;
-    setSearchTerm(value);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!searchTerm) {
       return;
-    } else {
-      getWeather(searchTerm);
     }
+    getWeather(searchTerm);
+    setSearchTerm("");
   };
 
-  // useEffect(() => {
-  //   const currentCity = localStorage.getItem("data");
-  //   let recent = currentCity === null ? [] : JSON.parse(currentCity);
-  //   const { latitude, longitude } = recent;
-  //   getWeather([latitude, longitude]);
-  // });
-
   const onAddWeather = (weather) => {
-    setWeatherDataArray([...weatherDataArray, weather]);
+    setWeatherDataArray([weather, ...weatherDataArray]);
+  };
+
+  const deleteSavedCard = (ind) => {
+    const updatedList = weatherDataArray.filter((data, index) => index !== ind);
+    setWeatherDataArray(updatedList);
   };
 
   return (
@@ -86,13 +77,16 @@ export const WeatherContextProvider = (props) => {
       value={[
         myIP,
         handleSubmit,
-        handleChange,
+        setSearchTerm,
         noData,
         city,
         weatherData,
         weatherIcon,
         onAddWeather,
         weatherDataArray,
+        deleteSavedCard,
+        getWeather,
+        searchTerm,
       ]}
     >
       {props.children}

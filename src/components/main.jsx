@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { Button } from "../common/button";
 import { Input } from "../common/input";
 import { Location } from "../icon/location_icon";
@@ -14,14 +14,27 @@ export const Main = () => {
   const [
     myIP,
     handleSubmit,
-    handleChange,
+    setSearchTerm,
     noData,
     city,
     weatherData,
     weatherIcon,
     onAddWeather,
     weatherDataArray,
+    deleteSavedCard,
+    getWeather,
+    searchTerm,
   ] = useContext(WeatherContext);
+
+  useEffect(() => {
+    const currentCity = localStorage.getItem("data");
+    if (!currentCity) {
+      return;
+    }
+    let recent = currentCity === null ? [] : JSON.parse(currentCity);
+    const { latitude, longitude } = recent;
+    getWeather([latitude, longitude]);
+  }, []);
 
   return (
     <MainBackground>
@@ -54,7 +67,8 @@ export const Main = () => {
                 placeholder="Enter location"
                 className="relative rounded-xl py-2 px-3 w-2/3 bg-gray-300 bg-opacity-60 text-white placeholder-gray-200"
                 required
-                onChange={handleChange}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                value={searchTerm}
               />
               <Button type="submit" className="z-10">
                 <Magnifier />
@@ -88,11 +102,13 @@ export const Main = () => {
                 />
                 <ul className="grid grid-cols-2 gap-2 mt-4">
                   {weatherDataArray.map((days, index) => {
-                    if (index > 0) {
-                      return <SavedCard key={index} day={days} />;
-                    } else {
-                      return null;
-                    }
+                    return (
+                      <SavedCard
+                        key={index}
+                        day={days}
+                        deleteSavedCard={() => deleteSavedCard(index)}
+                      />
+                    );
                   })}
                 </ul>
               </>
