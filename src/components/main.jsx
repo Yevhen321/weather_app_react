@@ -9,6 +9,7 @@ import { WeatherContext } from "../context/weather_context";
 import { MainBackground } from "./main_background";
 import { ForecastForm } from "./forecast_form";
 import { SavedCard } from "./saved_card";
+import { Loader } from "./loader/loader";
 
 export const Main = () => {
   const [
@@ -22,19 +23,32 @@ export const Main = () => {
     onAddWeather,
     weatherDataArray,
     deleteSavedCard,
-    getWeather,
     searchTerm,
+    loading,
+    setWeatherDataArray,
+    setWeatherData,
+    setCity,
   ] = useContext(WeatherContext);
 
   useEffect(() => {
-    const currentCity = localStorage.getItem("data");
+    const savedCityList = localStorage.getItem("cityList");
+    if (!savedCityList) {
+      return;
+    }
+    let recent = savedCityList === null ? [] : JSON.parse(savedCityList);
+    setWeatherDataArray(recent);
+  }, [setWeatherDataArray]);
+
+  useEffect(() => {
+    const currentCity = localStorage.getItem("foundWeatherData");
     if (!currentCity) {
       return;
     }
     let recent = currentCity === null ? [] : JSON.parse(currentCity);
-    const { latitude, longitude } = recent;
-    getWeather([latitude, longitude]);
-  }, []);
+    const { city, list } = recent;
+    setCity(`${city.name}, ${city.country}`);
+    setWeatherData(recent);
+  }, [setWeatherData, setCity]);
 
   return (
     <MainBackground>
@@ -87,7 +101,7 @@ export const Main = () => {
             {!weatherData ? (
               <div className="container p-4 flex items-center justify-center h-1/3 mb-auto">
                 <h1 className="text-gray-300 text-4xl font-bold uppercase">
-                  {noData}
+                  {loading ? <Loader /> : noData}
                 </h1>
               </div>
             ) : (
@@ -100,19 +114,19 @@ export const Main = () => {
                   icon={weatherIcon}
                   onAddWeather={() => onAddWeather(weatherData)}
                 />
-                <ul className="grid grid-cols-2 gap-2 mt-4">
-                  {weatherDataArray.map((days, index) => {
-                    return (
-                      <SavedCard
-                        key={index}
-                        day={days}
-                        deleteSavedCard={() => deleteSavedCard(index)}
-                      />
-                    );
-                  })}
-                </ul>
               </>
             )}
+            <ul className="grid grid-cols-2 gap-2 mt-4">
+              {weatherDataArray.map((data, index) => {
+                return (
+                  <SavedCard
+                    key={index}
+                    data={data}
+                    deleteSavedCard={() => deleteSavedCard(index)}
+                  />
+                );
+              })}
+            </ul>
           </div>
         </div>
       </ForecastForm>

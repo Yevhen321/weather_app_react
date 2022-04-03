@@ -4,6 +4,7 @@ export const WeatherContext = createContext();
 
 export const WeatherContextProvider = (props) => {
   const [noData, setNoData] = useState("No Data Yet");
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [weatherData, setWeatherData] = useState();
   const [weatherDataArray, setWeatherDataArray] = useState([]);
@@ -17,6 +18,7 @@ export const WeatherContextProvider = (props) => {
       typeof location === "string"
         ? `q=${location}`
         : `lat=${location[0]}&lon=${location[1]}`;
+    setLoading(true);
 
     try {
       let response = await fetch(
@@ -30,7 +32,12 @@ export const WeatherContextProvider = (props) => {
         return;
       }
       if (data && data.list.length > 0) {
-        setWeatherData(data);
+        setLoading(false);
+        setWeatherData({ city: data.city, list: data.list });
+        localStorage.setItem(
+          "foundWeatherData",
+          JSON.stringify({ city: data.city, list: data.list })
+        );
         setCity(`${data.city.name}, ${data.city.country}`);
         setWeatherIcon(
           `${
@@ -40,17 +47,13 @@ export const WeatherContextProvider = (props) => {
         setNoData("");
       }
     } catch (error) {
+      setLoading(false);
       console.log("Error :" + error);
     }
   };
 
   const myIP = (location) => {
     const { latitude, longitude } = location.coords;
-    const data = {
-      latitude,
-      longitude,
-    };
-    localStorage.setItem("data", JSON.stringify(data));
     getWeather([latitude, longitude]);
   };
 
@@ -64,10 +67,29 @@ export const WeatherContextProvider = (props) => {
   };
 
   const onAddWeather = (weather) => {
+    const isCityExist = weatherDataArray.find(
+      (w) => w.city.name === weather.city.name
+    );
+
+    if (isCityExist) {
+      return;
+    }
     setWeatherDataArray([weather, ...weatherDataArray]);
+    const fullData = [weather, ...weatherDataArray];
+    const cityData = fullData.map((list) => list);
+    localStorage.setItem("cityList", JSON.stringify(cityData));
   };
 
   const deleteSavedCard = (ind) => {
+    const localStorageCityList = localStorage.getItem("cityList");
+    if (localStorageCityList) {
+      const parsedLocalStorageCityList = JSON.parse(localStorageCityList);
+      const updatedLocalStorageList = parsedLocalStorageCityList.filter(
+        (data, index) => index !== ind
+      );
+      localStorage.setItem("cityList", JSON.stringify(updatedLocalStorageList));
+      setWeatherDataArray(updatedLocalStorageList);
+    }
     const updatedList = weatherDataArray.filter((data, index) => index !== ind);
     setWeatherDataArray(updatedList);
   };
@@ -85,8 +107,11 @@ export const WeatherContextProvider = (props) => {
         onAddWeather,
         weatherDataArray,
         deleteSavedCard,
-        getWeather,
         searchTerm,
+        loading,
+        setWeatherDataArray,
+        setWeatherData,
+        setCity,
       ]}
     >
       {props.children}
